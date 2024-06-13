@@ -4,7 +4,8 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 //#include <GyverINA.h>
-#include "INA219ADC.h"
+//#include "INA219ADC.h"
+#include "INA226ADC.h"
 #include "string.h"
 
 #define LOOPDELAY 1  //ms
@@ -56,13 +57,17 @@ uint32_t colectedDataTiming[DATABUFFERROWS];
 int16_t displaiedData[DATABUFFERCOLOMNS];
 
 //-----------------------------------------------------------------------------------------------------------
-INA219 ina219_1(0.1f, 2.0f, 0x40);
-INA219 ina219_2(0.1f, 2.0f, 0x41);
+// INA219 ina219_1(0.1f, 2.0f, 0x40);
+// INA219 ina219_2(0.1f, 2.0f, 0x41);
+
+INA226 ina226_1(0.1f, 2.0f, 0x40);
+INA226 ina226_2(0.1f, 2.0f, 0x41);
+
 Adafruit_SSD1306 display(128, 64);
 
 void setup() {  //-------------------------------------------------------------------------------------------
   Serial.begin(9600);
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  //0x3C
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  //0x3C, 0x3D
 
   display.clearDisplay();
   display.setTextSize(1);
@@ -83,39 +88,52 @@ void setup() {  //--------------------------------------------------------------
   display.display();
   //---------------------------------------------------
   //---------------------------------------------------
-  Serial.println(F("INA219..."));
-  display.println("INA219...");
+  // Serial.println(F("INA219..."));
+  // display.println("INA219...");
+  Serial.println(F("INA226..."));
+  display.println("INA226...");
+
   display.display();
 
-  if (ina219_1.begin()) {
+  if (ina226_1.begin()) {
     Serial.println(F("ina1 connected!"));
     display.print("S1 ok, ");
+    display.display();
   } else {
     Serial.println(F("ina1 not found!"));
     display.print("S1 err, ");
-    while (1)
-      ;
+    display.display();
+    // while (1)
+    //   ;
   }
-  display.display();
-  if (ina219_2.begin()) {
+
+  if (ina226_2.begin()) {
     Serial.println(F("ina2 connected!"));
     display.println("S2 ok");
+    display.display();
   } else {
     Serial.println(F("ina2 not found!"));
     display.println("S2 err");
-    while (1)
-      ;
+    display.display();
+    // while (1)
+    //   ;
   }
 
   // Serial.print(F("Calibration value1: "));
-  // Serial.println(ina219_1.getCalibration());
+  // Serial.println(ina226_1.getCalibration());
   // Serial.print(F("Calibration value2: "));
-  // Serial.print(ina219_2.getCalibration());
-  ina219_1.setResolution(INA219_VBUS, INA219_RES_12BIT_X2);  // Напряжение в 12ти битном режиме + 4х кратное усреднение
-  ina219_1.setResolution(INA219_VSHUNT, INA219_RES_12BIT);   // Ток в 12ти битном режиме + 128х кратное усреднение
-  ina219_2.setResolution(INA219_VBUS, INA219_RES_12BIT_X2);  // Напряжение в 12ти битном режиме + 4х кратное усреднение
-  ina219_2.setResolution(INA219_VSHUNT, INA219_RES_12BIT);   // Ток в 12ти битном режиме + 128х кратное усреднение
+  // Serial.print(ina226_2.getCalibration());
+  // ina226_1.setResolution(INA219_VBUS, INA219_RES_12BIT_X2);  // Напряжение в 12ти битном режиме + 4х кратное усреднение
+  // ina226_1.setResolution(INA219_VSHUNT, INA219_RES_12BIT);   // Ток в 12ти битном режиме + 128х кратное усреднение
+  // ina226_2.setResolution(INA219_VBUS, INA219_RES_12BIT_X2);  // Напряжение в 12ти битном режиме + 4х кратное усреднение
+  // ina226_2.setResolution(INA219_VSHUNT, INA219_RES_12BIT);   // Ток в 12ти битном режиме + 128х кратное усреднение
 
+  ina226_1.setSampleTime(INA226_VBUS, INA226_CONV_140US);    // Напряжение в 12ти битном режиме + 4х кратное усреднение
+  ina226_1.setSampleTime(INA226_VSHUNT, INA226_CONV_140US);  // Ток в 12ти битном режиме + 128х кратное усреднение
+  ina226_2.setSampleTime(INA226_VBUS, INA226_CONV_140US);    // Напряжение в 12ти битном режиме + 4х кратное усреднение
+  ina226_2.setSampleTime(INA226_VSHUNT, INA226_CONV_140US);  // Ток в 12ти битном режиме + 128х кратное усреднение
+  ina226_1.setAveraging(INA226_AVG_X1);
+  ina226_2.setAveraging(INA226_AVG_X1);
   //---------------------------------------------------
   //firstLogDataToSDCard();
   //---------------------------------------------------
@@ -232,10 +250,10 @@ void sensorsRead() {
   // Read values from sensors
   for (uint8_t iteratie = 0; iteratie < DATABUFFERROWS; iteratie++) {
 
-    colectedData[iteratie][S1voltage] = (uint16_t)((ina219_1.getVoltage()) * 1000);
-    colectedData[iteratie][S1current] = (int16_t)((ina219_1.getCurrent()) * 1000);
-    colectedData[iteratie][S2voltage] = (uint16_t)((ina219_2.getVoltage()) * 1000);
-    colectedData[iteratie][S2current] = (int16_t)((ina219_2.getCurrent()) * 1000);
+    colectedData[iteratie][S1voltage] = (uint16_t)((ina226_1.getVoltage()) * 1000);
+    colectedData[iteratie][S1current] = (int16_t)((ina226_1.getCurrent()) * 1000);
+    colectedData[iteratie][S2voltage] = (uint16_t)((ina226_2.getVoltage()) * 1000);
+    colectedData[iteratie][S2current] = (int16_t)((ina226_2.getCurrent()) * 1000);
     colectedDataTiming[iteratie] = millis();
   }
 }
@@ -276,7 +294,7 @@ void logDataToSDCard() {
                               (int16_t)(colectedData[iteratie][S2current]),
                               (uint32_t)colectedDataTiming[iteratie]);
     }
-    
+
     // Write the entire data buffer to the file
     dataFile.write((uint8_t*)dataBuffer, bufferIndex);
     //------------------------------------------------------------------------------------
