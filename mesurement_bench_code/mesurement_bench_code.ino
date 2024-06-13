@@ -1,85 +1,166 @@
 #include <Wire.h>
 #include <SD.h>
 #include <SPI.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+// #include <Adafruit_GFX.h>
+// #include <Adafruit_SSD1306.h>
 #include <GyverINA.h>
+#include <GyverOLED.h>
+#include "menu.h"
+#include "button.h"
 
-const int chipSelectPin = 53;
+// #define MAX_ITEM_NAME_LENGTH 25
+#define chipSelectPin 53
 
 INA219 ina219_1(0.1f, 2.0f, 0x40);
 INA219 ina219_2(0.1f, 2.0f, 0x41);
 
-// OLED display
-#define OLED_RESET 4
-Adafruit_SSD1306 display(OLED_RESET);
+GyverOLED<SSD1306_128x64, OLED_BUFFER> display;
+
+Menu mainMenu, subMenu1, subMenu2, subMenu3;
+Menu *currentMenu;
+Button upBtn, okBtn, dwBtn;
+
+void menuParamInit() {
+  rootMenu = &mainMenu;
+  currentMenu = rootMenu;
+
+  char mainMenuName[MAX_ITEM_NAME_LENGTH] = "Main menu";
+  char mainMenuOptions[][MAX_ITEM_NAME_LENGTH] = {
+    "1.SimpleLoggs",
+    "2.Efficiency",
+    "3.Capacity",
+    "4.AmplFreqCaract",
+    "5.SomethingElse"
+  };
+  initMenu(&mainMenu, 5, mainMenuOptions);
+  setMenuName(&mainMenu, mainMenuName);
+
+  char subMenu1Options[][MAX_ITEM_NAME_LENGTH] = {
+    "0.<-Back",
+    "1.S1(V,A,W),time",
+    "2.S1,S2(V,A,W),time",
+  };
+  initMenu(&subMenu1, 3, subMenu1Options);
+
+  char subMenu2Options[][MAX_ITEM_NAME_LENGTH] = {
+    "0.<-Back",
+    "1.S1/S2(V,A,W) % time",
+  };
+  initMenu(&subMenu2, 2, subMenu2Options);
+}
+
+void normalMenuPrint(Menu *currMenu) {
+  display.clear();
+  display.setCursorXY(30, 0);
+  display.println(getMenuName(currMenu));
+  display.setCursorXY(0, 8);
+  for (int i = 0; i < getMaxItems(currMenu); i++) {
+    if (i + 1 == getMenuState(currMenu)) {
+      display.invertText(true);
+      display.println(getItemName(currMenu, i + 1));
+      display.invertText(false);
+    } else display.println(getItemName(currMenu, i + 1));
+  }
+  display.line(4, 7, 120, 7);
+  display.update();
+}
+
+void smallMenuPrint(Menu *currMenu) {
+  display.setCursorXY(0, 0);
+  display.println("      Main Menu");
+  display.line(4, 63 - 7, 120, 63 - 7);
+  display.setCursorXY(0, 9);
+}
+
+void confirmMenuPrint(Menu *currMenu) {
+  display.setCursorXY(0, 0);
+  display.roundRect(16, 16, 123 - 16, 63 - 15, OLED_FILL);
+  display.invertText(true);
+  display.setCursorXY(15 + 11, 24);
+  display.print("Confirm Back");
+  display.setCursorXY(24, 40);
+  display.print("No");
+  display.setCursorXY(84, 40);
+  display.print("Yes");
+  display.update();
+  display.invertText(false);
+}
+
+void buttInit() {
+  initBtn(&upBtn, 14);
+  initBtn(&okBtn, 15);
+  initBtn(&dwBtn, 16);
+}
 
 void setup() {  //--------------------------------------------------------------------------------------------
   Serial.begin(9600);
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3D);
 
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(WHITE);
+  display.init();
+  menuParamInit();
+  buttInit();
+
+  display.clear();
+  display.setScale(1);
+  display.invertDisplay(false);
   display.setCursor(0, 0);
   //---------------------------------------------------
   //---------------------------------------------------
-  while (!SD.begin(chipSelectPin)) {
-    Serial.println("SD card initialization failed!");
-    display.println("SD failed");
-    display.display();
-    display.setCursor(0, 0);
-  }
-  display.clearDisplay();
+  // while (!SD.begin(chipSelectPin)) {
+  //   Serial.println("SD card initialization failed!");
+  //   display.println("SD failed");
+  //   display.update();
+  //   display.setCursor(0, 0);
+  // }
+  display.clear();
   display.setCursor(0, 0);
   Serial.println("SD card initialized successfully.");
   display.println("SD initialized");
-  display.display();
+  display.update();
   //---------------------------------------------------
   //---------------------------------------------------
   Serial.println(F("INA219..."));
   display.println("INA219...");
-  display.display();
+  display.update();
 
-  if (ina219_1.begin()) {
-    Serial.println(F("ina1 connected!"));
-    display.print("S1 ok, ");
-  } else {
-    Serial.println(F("ina1 not found!"));
-    display.print("S1 err, ");
-    while (1)
-      ;
-  }
-  display.display();
-  if (ina219_2.begin()) {
-    Serial.println(F("ina2 connected!"));
-    display.println("S2 ok");
-  } else {
-    Serial.println(F("ina2 not found!"));
-    display.println("S2 err");
-    while (1)
-      ;
-  }
-  display.display();
+  // if (ina219_1.begin()) {
+  //   Serial.println(F("ina1 connected!"));
+  //   display.print("S1 ok, ");
+  // } else {
+  //   Serial.println(F("ina1 not found!"));
+  //   display.print("S1 err, ");
+  //   while (1)
+  //     ;
+  // }
+  // display.update();
+  // if (ina219_2.begin()) {
+  //   Serial.println(F("ina2 connected!"));
+  //   display.println("S2 ok");
+  // } else {
+  //   Serial.println(F("ina2 not found!"));
+  //   display.println("S2 err");
+  //   while (1)
+  //     ;
+  // }
+  // display.update();
 
-  // Serial.print(F("Calibration value1: "));
-  // Serial.println(ina219_1.getCalibration());
-  // Serial.print(F("Calibration value2: "));
-  // Serial.print(ina219_2.getCalibration());
-  ina219_1.setResolution(INA219_VBUS, INA219_RES_12BIT_X4);      // Напряжение в 12ти битном режиме + 4х кратное усреднение
-  ina219_1.setResolution(INA219_VSHUNT, INA219_RES_12BIT_X128);  // Ток в 12ти битном режиме + 128х кратное усреднение
-  ina219_2.setResolution(INA219_VBUS, INA219_RES_12BIT_X4);      // Напряжение в 12ти битном режиме + 4х кратное усреднение
-  ina219_2.setResolution(INA219_VSHUNT, INA219_RES_12BIT_X128);  // Ток в 12ти битном режиме + 128х кратное усреднение
+  // // Serial.print(F("Calibration value1: "));
+  // // Serial.println(ina219_1.getCalibration());
+  // // Serial.print(F("Calibration value2: "));
+  // // Serial.print(ina219_2.getCalibration());
+  // ina219_1.setResolution(INA219_VBUS, INA219_RES_12BIT_X4);      // Напряжение в 12ти битном режиме + 4х кратное усреднение
+  // ina219_1.setResolution(INA219_VSHUNT, INA219_RES_12BIT_X128);  // Ток в 12ти битном режиме + 128х кратное усреднение
+  // ina219_2.setResolution(INA219_VBUS, INA219_RES_12BIT_X4);      // Напряжение в 12ти битном режиме + 4х кратное усреднение
+  // ina219_2.setResolution(INA219_VSHUNT, INA219_RES_12BIT_X128);  // Ток в 12ти битном режиме + 128х кратное усреднение
 
-  //---------------------------------------------------
-  //---------------------------------------------------
+  // ---------------------------------------------------
+  // ---------------------------------------------------
   File dataFile = SD.open("volamp.txt", FILE_WRITE);
   if (dataFile) {
     dataFile.println("S1Volt S1Amp S2Volt S2Amp time");
 
     dataFile.close();
     Serial.println("Data saved to SD card.");
-    display.println("          SD saved");
+    display.println("          Logging...");
   } else {
     Serial.println("Error opening data file on SD card.");
     display.println("          SD error");
@@ -95,15 +176,18 @@ void setup() {  //--------------------------------------------------------------
 void loop() {  //--------------------------------------------------------------------------------------------
   // Serial.println("Start");
 
-  display.clearDisplay();
-  // display.setTextSize(0);
-  // display.setTextColor(WHITE);
-  display.setCursor(0, 0);
+  normalMenuPrint(currentMenu);
+  if (check(&upBtn, 1000)) {
+    nextItem(currentMenu);
+  }
+  if (check(&dwBtn, 1000)) {
+    prevItem(currentMenu);
+  }
 
-  logDataToSDCard();
-  delay(100);
+  // delay(2000);
 
-  display.display();
+  // confirmMenuPrint(&subMenu2, 6);
+  // delay(2000);
 
 }  //--------------------------------------------------------------------------------------------
 
@@ -142,34 +226,34 @@ void logDataToSDCard() {
   display.println("A");
 
   // Save the values to the SD card
-  File dataFile = SD.open("volamp.csv", FILE_WRITE);
-  if (dataFile) {
-    // dataFile.print("Sensor 1 - Voltage: ");
-    dataFile.print(voltage1, 3);
-    // dataFile.print("V, Current:");
-    dataFile.print(",");
-    dataFile.print(current1, 3);
-    // dataFile.println("A");
-    dataFile.print(",");
+  // File dataFile = SD.open("volamp.csv", FILE_WRITE);
+  // if (dataFile) {
+  //   // dataFile.print("Sensor 1 - Voltage: ");
+  //   dataFile.print(voltage1, 3);
+  //   // dataFile.print("V, Current:");
+  //   dataFile.print(",");
+  //   dataFile.print(current1, 3);
+  //   // dataFile.println("A");
+  //   dataFile.print(",");
 
-    // dataFile.print("Sensor 2 - Voltage: ");
-    dataFile.print(voltage2, 3);
-    // dataFile.print("V, Current:");
-    dataFile.print(",");
-    dataFile.print(current2, 3);
-    // dataFile.println("A");
-    dataFile.print(",");
+  //   // dataFile.print("Sensor 2 - Voltage: ");
+  //   dataFile.print(voltage2, 3);
+  //   // dataFile.print("V, Current:");
+  //   dataFile.print(",");
+  //   dataFile.print(current2, 3);
+  //   // dataFile.println("A");
+  //   dataFile.print(",");
 
-    dataFile.print(millis());
-    // dataFile.println("s");
-    dataFile.println(",");
+  //   dataFile.print(millis());
+  //   // dataFile.println("s");
+  //   dataFile.println(",");
 
-    dataFile.close();
-    Serial.println("Data saved to SD card.");
-    display.println("          Logging...");
-  } else {
-    Serial.println("Error opening data file on SD card.");
-    display.println("          SD error");
-    SD.begin(chipSelectPin);
-  }
+  //   dataFile.close();
+  //   Serial.println("Data saved to SD card.");
+  //   display.println("          Logging...");
+  // } else {
+  //   Serial.println("Error opening data file on SD card.");
+  //   display.println("          SD error");
+  //   SD.begin(chipSelectPin);
+  // }
 }
