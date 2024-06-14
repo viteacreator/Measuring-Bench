@@ -1,3 +1,7 @@
+#define SERIALDEBUG
+
+#define INA226_ADC //INA226_ADC or INA219_ADC
+
 #include <Wire.h>
 #include <SD.h>
 #include <SPI.h>
@@ -5,7 +9,7 @@
 #include <Adafruit_SSD1306.h>
 //#include <GyverINA.h>
 //#include "INA219ADC.h"
-#include "INA226ADC.h"
+// #include "INA226ADC.h"
 #include "string.h"
 
 #define LOOPDELAY 1  //ms
@@ -15,6 +19,18 @@
 #define DATABUFFERROWS 100  //for colectedData buffer max 255
 #define DATABUFFERCOLOMNS 4
 //#define PAKAGETOSDSIZE 10  // 10 rows of data from ram
+
+#ifdef SERIALDEBUG
+int i=0;
+#endif
+
+#ifdef INA219_ADC
+#include "INA219ADC.h"
+#elif defined(INA226_ADC)
+#include "INA226ADC.h"
+#else
+#error "Please define INA219 or INA226"
+#endif
 
 enum colData {
   S1voltage,
@@ -66,7 +82,9 @@ INA226 ina226_2(0.1f, 2.0f, 0x41);
 Adafruit_SSD1306 display(128, 64);
 
 void setup() {  //-------------------------------------------------------------------------------------------
+#ifdef SERIALDEBUG
   Serial.begin(9600);
+#endif
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  //0x3C, 0x3D
 
   display.clearDisplay();
@@ -76,31 +94,43 @@ void setup() {  //--------------------------------------------------------------
   //---------------------------------------------------
   //---------------------------------------------------
   while (!SD.begin(CHIPSELECTPIN)) {
+#ifdef SERIALDEBUG
     Serial.println("SD card initialization failed!");
+#endif
     display.println("SD failed");
     display.display();
     display.setCursor(0, 0);
   }
   display.clearDisplay();
   display.setCursor(0, 0);
+#ifdef SERIALDEBUG
   Serial.println("SD card initialized successfully.");
+#endif
   display.println("SD initialized");
   display.display();
   //---------------------------------------------------
   //---------------------------------------------------
-  // Serial.println(F("INA219..."));
+#ifdef SERIALDEBUG
+  Serial.println(F("INA219..."));
+#endif
   // display.println("INA219...");
+#ifdef SERIALDEBUG
   Serial.println(F("INA226..."));
+#endif
   display.println("INA226...");
 
   display.display();
 
   if (ina226_1.begin()) {
+#ifdef SERIALDEBUG
     Serial.println(F("ina1 connected!"));
+#endif
     display.print("S1 ok, ");
     display.display();
   } else {
+#ifdef SERIALDEBUG
     Serial.println(F("ina1 not found!"));
+#endif
     display.print("S1 err, ");
     display.display();
     // while (1)
@@ -108,11 +138,15 @@ void setup() {  //--------------------------------------------------------------
   }
 
   if (ina226_2.begin()) {
+#ifdef SERIALDEBUG
     Serial.println(F("ina2 connected!"));
+#endif
     display.println("S2 ok");
     display.display();
   } else {
+#ifdef SERIALDEBUG
     Serial.println(F("ina2 not found!"));
+#endif
     display.println("S2 err");
     display.display();
     // while (1)
@@ -123,6 +157,8 @@ void setup() {  //--------------------------------------------------------------
   // Serial.println(ina226_1.getCalibration());
   // Serial.print(F("Calibration value2: "));
   // Serial.print(ina226_2.getCalibration());
+#ifdef SERIALDEBUG
+#endif
   // ina226_1.setResolution(INA219_VBUS, INA219_RES_12BIT_X2);  // Напряжение в 12ти битном режиме + 4х кратное усреднение
   // ina226_1.setResolution(INA219_VSHUNT, INA219_RES_12BIT);   // Ток в 12ти битном режиме + 128х кратное усреднение
   // ina226_2.setResolution(INA219_VBUS, INA219_RES_12BIT_X2);  // Напряжение в 12ти битном режиме + 4х кратное усреднение
